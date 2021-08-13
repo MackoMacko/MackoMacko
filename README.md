@@ -1,0 +1,4 @@
+- 👋 Hi, I’m @MackoMacko
+- 👀 I’m interested in python, simulations, phhysics, Solar Cells
+- 🌱 I’m currently learning python
+- 📫 How to reach me maciej.krajewski@fuw.edu.pl
