@@ -1,0 +1,196 @@
+"""
+Created on Mon Nov  8 12:42:54 2017
+
+@author: Maciek
+"""
+
+import numpy as np
+from scipy.integrate import odeint
+import matplotlib.pyplot as plt
+
+
+
+
+
+Sterowanie=3
+
+
+
+
+
+def pend(y,t,a,b,c,f,omega):
+    X,V = y
+    dydt = [V , b*X - a*X**3 - c*V + f*np.cos(omega*t)]
+    return dydt
+
+def pend2(y,t,a,b,c,f,omega, phi):
+    X,V = y
+    dydt = [V , b*X - a*X**3 - c*V + f*np.cos(omega*t+phi)]
+    return dydt
+def plotting_movie2(f):
+    count=0
+    for frame in f:
+        plt.clf() # wyczyść obrazek
+        F = plt.gcf() # zdefiniuj nowy
+        t = np.linspace(0,1000,30001)
+        sol = odeint(pend , y0, t, atol=1e-4, rtol=1e-4, args=(a,b,c,frame,omega))
+        t_min=250
+        Label='Sila pobudzania: '+str(frame) #label jako sila pobudzania
+        
+        plt.plot(sol[t>t_min,0],sol[t>t_min,1])
+        plt.xlabel('X')
+        plt.ylabel('Y')
+        plt.xlim(-1.5,1.5)
+        plt.ylim(-1,1)
+        plt.title(Label)        
+        plt.plot() # narysuj
+        F.set_size_inches((6,6)) # rozmiar rysunku
+        Title='Sila pobudzania '+str(frame)
+        plt.title(Title)
+        NameFile='symulacja_chaos/'+str(count)+Title+'.png' #ATTENTION: place your destiny folder here
+        plt.savefig(NameFile)
+        count=count+1
+def plotting_movie3(phi_list):
+    count=0
+    for phi in phi_list:
+        plt.clf() # wyczyść obrazek
+        F = plt.gcf() # zdefiniuj nowy
+        t_n=((2*np.pi)/omega)*np.array(range(5000))
+        sol = odeint(pend2 , y0, t_n, atol=1e-4, rtol=1e-4, args=(a,b,c,f,omega, phi))
+        Label='Przesuniecie fazowe: '+str(phi) #label jako sila pobudzania
+        plt.scatter(sol[:, 0], sol[:,1], marker='.', color='b')
+        plt.xlabel('X')
+        plt.ylabel('Y')
+        plt.xlim(-2,2)
+        plt.ylim(-1.5,1.5)
+        plt.title(Label)        
+        plt.plot() # narysuj
+        F.set_size_inches((6,6)) # rozmiar rysunku
+        Title='Faza pobudzenia '+str(phi)
+        plt.title(Title)
+        NameFile='symulacja_chaos/'+str(count)+Title+'.png'
+    #    plt.savefig(NameFile)
+        count=count+1          
+
+a = 1.
+b = 1.
+c = 0.2
+omega = 0.2*2*np.pi
+f= 0.2 # amplituda pobudzen
+y0 = [0. , 0.05]
+if(Sterowanie==1):
+    '''Zadanie 1'''    
+
+    t = np.linspace(0,50,10001)
+    sol = odeint(pend , y0, t, atol=1e-4, rtol=1e-4, args=(a,b,c,f,omega))
+    
+    plt.figure(1)
+    
+    plt.subplot(211)
+    plt.plot(t, sol[:, 0], 'b', label='X(t)')
+    plt.plot(t, sol[:, 1], 'g', label='V(t)')
+    plt.legend(loc='best')
+    plt.xlabel('t')
+    plt.ylabel('Amp')
+    plt.grid()
+    
+    plt.subplot(212)
+    plt.plot(sol[:,0], sol[:, 1], 'b', label='Trajektoria')
+    plt.legend(loc='best')
+    plt.xlabel('X')
+    plt.ylabel('V')
+    plt.grid()
+    
+    plt.show()
+    
+if(Sterowanie==2):
+    '''Zadanie 2'''
+    f= 0.27 # amplituda pobudzen
+    '''
+    f=0.2 - 1 okres
+    f=0.253 - 2 okresy
+    f=0.27 - 4 okresy
+    f=0.28 - chaos
+    '''
+    #czas
+    t = np.linspace(0,1000,30001)
+    sol = odeint(pend , y0, t, atol=1e-4, rtol=1e-4, args=(a,b,c,f,omega))
+    t_min=250
+    Label='Sila pobudzania: '+str(f) #label jako sila pobudzania
+    
+    plt.plot(sol[t>t_min,0],sol[t>t_min,1])
+    plt.xlabel('X')
+    plt.ylabel('Y')
+    plt.title(Label)
+    plt.show()
+    
+    #plottowanie filmiku
+    f=np.linspace(0.2,0.7,100)
+    plotting_movie2(f)
+    
+if(Sterowanie==3):
+    '''Zadanie 3'''
+    c=0.05
+    f=0.3
+    t_n=((2*np.pi)/omega)*np.array(range(5000))
+    sol = odeint(pend , y0, t_n, atol=1e-4, rtol=1e-4, args=(a,b,c,f,omega))
+    Label='Sila pobudzania: '+str(f) #label jako sila pobudzania
+    plt.scatter(sol[:, 0], sol[:,1], marker='.', color='b')
+    plt.xlabel('X')
+    plt.ylabel('V')
+    plt.grid()
+    plt.title(Label)
+    plt.show()
+    
+    phi=np.linspace(0,np.pi,60)
+    plotting_movie3(phi)
+    
+
+if(Sterowanie >3):
+    print("Zla wartosc zmiennej sterujacej")    
+    
+    
+plt.subplot(211)
+plt.title("Zadanie 1- ewolucja układu")
+plt.plot(sol[:,0],sol[:,1], label=f)
+#plt.plot(sol[t>200,0],sol[t>200,1], label=f)
+plt.legend(loc='best')
+plt.show()
+
+def pend(y,t,a,b,c,f,omega):
+   X,V = y
+   dydt = [V , b*X - a*X**3 - c*V + f*np.cos(omega*t)]
+   return dydt
+
+# Definition of parameters
+a = 1.
+b = 1.
+c = 0.05
+omega = 0.2*2*np.pi
+f= 0.3 # amplituda pobudzen
+
+
+y0 = [0. , 0.05]
+tn = 2*np.pi/omega * np.array(range(10000))
+tmin=200
+
+'''atol= absolute tolerance, rtol=relative tolerance'''
+'''przyklad: odeint(dxdt,x0,t,atol=1e-4,rtol=1e-4)'''
+
+
+sol = odeint(pend , y0, tn, args=(a,b,c,f,omega))
+plt.title("Zadanie 3")
+plt.ylim(-1.5,1.5)
+plt.scatter(sol[:,0],sol[:,1],s=5, c='b',lw=0,marker='o')
+
+
+plt.grid()
+plt.show()
+
+
+
+
+
+
+
+
