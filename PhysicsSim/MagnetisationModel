@@ -1,0 +1,202 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Dec 13 11:26:11 2017
+
+@author: Maciek
+"""
+
+import numpy as np
+import matplotlib.pyplot as plt
+import scipy.special as sc
+
+def suma_spinow(s):
+    mi = np.roll(s, 1, axis=0)
+    mi += np.roll(s, -1, axis=0)
+    mi += np.roll(s, 1, axis=1)
+    mi += np.roll(s, -1, axis=1)
+    return mi
+    
+def init(L):
+    b = np.arange(L*L,dtype=np.int).reshape(L,L) 
+    mask = (b//L+b%L)%2 #siatka 0/1
+    mask = mask.astype(bool); not_mask = np.logical_not(mask) #logiczne przeciwienstwa
+    return mask, not_mask
+    
+def obliczanie_magnetyzacji(L, Temp, Time):
+    beta=1./T
+    N=L*L
+    czas_wyrownania=3000
+    mask,not_mask= init(L)
+    s = np.ones( (L,L), dtype=np.int )
+    magnetyzacja=[]
+
+    for i in range(Time+czas_wyrownania):
+        mi=suma_spinow(s)
+        #losowanie
+        prob = np.exp(-2*beta*mi*s )
+        r=np.random.random([L,L]) # losujemy tablice LxL
+        ind = ( r < prob ) # tablica TRUE/FALSE gdy jest odpowiednie prawdopodobienstwo
+        
+        rand=np.random.random()
+        if (rand >= 1./2):
+            s = np.choose( ind & mask, (s,-s))
+        else:
+            s = np.choose( ind & not_mask, (s,-s))
+            
+        if (i > czas_wyrownania):
+            magnetyzacja.append(np.sum(s/N))
+#            print(magnetyzacja)
+    mag=np.mean( np.abs( magnetyzacja ) )
+    podatnosc=np.var( magnetyzacja )*beta*L*L
+    return mag, podatnosc
+    
+def obliczanie_magnetyzacji2(L,Temp, Time,r):
+    beta=1./T
+    N=L*L
+    czas_wyrownania=1
+    mask,not_mask= init(L)
+    if(r=='rand'):
+        s = np.random.random( (L,L) )
+        s = (s < 1./2)*2.-1
+    if(r=='ones'):
+        s = np.ones( (L,L), dtype=np.int )
+        
+    magnetyzacja=[]
+    for i in range(Time+czas_wyrownania):
+        mi=suma_spinow(s)
+        #losowanie
+        prob = np.exp(-2*beta*mi*s )
+        r=np.random.random([L,L]) # losujemy tablice LxL
+        ind = ( r < prob ) # tablica TRUE/FALSE gdy jest odpowiednie prawdopodobienstwo
+        
+        rand=np.random.random()
+        if (rand >= 1./2):
+            s = np.choose( ind & mask, (s,-s))
+        else:
+            s = np.choose( ind & not_mask, (s,-s))
+            
+        if (i > czas_wyrownania):
+            magnetyzacja.append(np.sum(s/N))
+#            print(magnetyzacja)
+   
+    return np.asarray(magnetyzacja)
+    
+def obliczanie_magnetyzacji3(L, Temp, Time):
+    beta=1./T
+    N=L*L
+    czas_wyrownania=3000
+    mask,not_mask= init(L)
+    s = np.ones( (L,L), dtype=np.int )
+    Energia=[]
+    for i in range(Time+czas_wyrownania):
+        mi=suma_spinow(s)
+        #losowanie
+        prob = np.exp(-2*beta*mi*s )
+        r=np.random.random([L,L]) # losujemy tablice LxL
+        ind = ( r < prob ) # tablica TRUE/FALSE gdy jest odpowiednie prawdopodobienstwo
+        
+        rand=np.random.random()
+        if (rand >= 1./2):
+            s = np.choose( ind & mask, (s,-s))
+        else:
+            s = np.choose( ind & not_mask, (s,-s))
+        if (i > czas_wyrownania):
+            Energia.append(np.sum(-mi*s/2))
+            
+#            print(magnetyzacja)
+    return np.var(np.asarray((Energia)))
+#            print(magnetyzacja)
+def cieplo_wlasciwe_teoria(J,T):
+    B=1./T
+    kappa=2*np.tanh(2*B*J)/np.cosh(2*B*J)
+    kappa_prim=2*(np.tanh(2*B*J))**2 - 1
+    amp=(2./np.pi)*(B/np.tanh(2*B*J))**2
+    K=sc.ellipk(kappa**2)
+    E=sc.ellipe(kappa**2)
+    C=amp*(2*K-2*E-(1-kappa_prim)*(np.pi/2 + kappa_prim*K))
+    return C
+"INIT"
+
+Time=3000
+Sterowanie= int(input("wybierz opcje (Numer zadania 1-4): "))
+J=1
+
+if (Sterowanie==1):
+    L = 6 #dl siatki
+    Temp_range=[1,2,3,4,5]
+    """Zad 1. test"""
+    for T in Temp_range:
+        magnetyzacja, podatnosc =obliczanie_magnetyzacji(L,T,Time)
+        print("Temperatura:", T, "Magnetyzacja:", round(magnetyzacja,4), "Podatnosc=", round(podatnosc,4))
+
+    """Zad 1. termalizacja"""
+if (Sterowanie==2):
+    T=2.2 #temperatura ukladu
+    L = 50 #dl siatki
+    mag_chwilowa_rand=obliczanie_magnetyzacji2(L,T,Time, 'rand')
+    mag_chwilowa_ones=obliczanie_magnetyzacji2(L,T,Time, 'ones')
+    
+    plt.plot(np.abs(mag_chwilowa_rand))
+    plt.plot(np.abs(mag_chwilowa_ones))
+    
+    """Zad 2. wykres magnetyzacji i podatnosci"""
+if (Sterowanie==3):
+    L=50
+    Time=3000
+    Temp=np.linspace(1.5,3,30)
+    Magnetyzacja=[]
+    Podatnosc=[]
+    Teoretyczna_mag=(1- (np.sinh(2./Temp))**(-1/4))**(1/8)
+    for T in Temp:
+        mag,pod=obliczanie_magnetyzacji(L,T,Time)
+        Magnetyzacja.append(mag)
+        Podatnosc.append(pod)
+        print(T)
+    
+    plt.subplot(121)
+    plt.plot(Temp,Magnetyzacja, 'ro', Temp, Teoretyczna_mag)
+    plt.subplot(122)
+    plt.plot(Temp,Podatnosc, 'ro')
+    """Zad. dodatkowe, wykres ciepla wlasciwego"""
+if (Sterowanie==4):
+    L=40
+    Time=3000
+    Temp=np.linspace(0.5,5,100)
+    C_wlasciwe=[]
+    for T in Temp:
+        beta=1./T
+        C_wl=obliczanie_magnetyzacji3(L,T, Time)
+        C_wl=(beta**2)*C_wl/(L**2)
+        C_wlasciwe.append([C_wl, cieplo_wlasciwe_teoria(J,T)])
+        print(T)
+    C=np.asarray(C_wlasciwe)
+    plt.plot(Temp,C[:,0], 'ro', Temp, C[:,1], 'b--')
+##losowanie
+#prob = np.exp(-2*beta*mi*s )
+#r=np.random.random([L,L]) # losujemy tablice LxL
+#ind = ( r < prob ) # tablica TRUE/FALSE gdy jest odpowiednie prawdopodobienstwo
+#
+##wybieramy dana podsiec
+#rand=np.random.random()
+#if (rand >= 1./2):
+#    s = np.choose( ind and mask ,(s,-s))
+#else:
+#    s = np.choose( ind and not_mask ,(s,-s))
+#    
+    
+
+# wg. Metropolisa
+#ind = ( r < prob )
+
+
+
+
+
+
+
+
+
+
+
+
+
