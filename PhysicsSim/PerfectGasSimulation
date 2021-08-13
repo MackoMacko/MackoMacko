@@ -1,0 +1,278 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Oct 25 10:18:45 2017
+
+@author: Maciek
+"""
+
+import numpy as np
+import matplotlib.pyplot as plt
+from numpy import linalg as la
+import datetime
+
+
+class particle:
+    def __init__(self, Radius, Polozenie, Predkosc, Masa):
+        self.R=Radius #promien czastki
+        self.r=Polozenie #polozenie
+        self.v=Predkosc #predkosc
+        self.m=Masa
+        
+def potencial(part1, part2):
+    u_c=4*epsi*((sigma/force_limit)**12-(sigma/force_limit)**6)
+    r12=la.norm(part2.r-part1.r)
+#    if (r12 <= force_limit):
+#        return 4*epsi*((sigma/r12)**12-(sigma/r12)**6)-u_c
+#    if (r12 > force_limit):
+#        return 0
+    return 4*epsi*((sigma/r12)**12-(sigma/r12)**6)-u_c
+
+def potencial_energy(particles):
+    pot=0
+    for part1 in particles:
+        for part2 in particles:
+            if (particles.index(part1) > particles.index(part2)):
+                pot= pot+potencial(part1,part2)
+    return pot
+        
+def kinetic_energy(particles):
+    E_k=0
+    for part in particles:
+        E_k=E_k+la.norm(part.v)/2
+    return E_k
+
+def Energy_overall(particles):
+    E_p=potencial_energy(particles)
+    E_k=kinetic_energy(particles)
+    return E_p+E_k
+
+def Temperature(particles):
+    Ek=kinetic_energy(particles)
+    N=len(particles)
+    return Ek/(N*k_b)
+
+def Pressure(particles):
+    P1=N*k_b*Temperature(particles)/box**2
+    P2=0
+    for part1 in particles:
+        for part2 in particles:
+            if (particles.index(part1) > particles.index(part2)):
+                P2= P2+np.dot(force(part1,part2),part2.r-part1.r)
+    return P1+P2
+
+def Init_r(N, dx, dy):
+    particles= []
+    sumV, sumV2=0.0, 0.0
+    for i in range(N):
+        part= particle(Radius, [0,0], [0,0], 1) 
+        part.r= np.asarray([(dx/np.sqrt(N))*(i%int(np.sqrt(N))), (dy/np.sqrt(N))*(int((i/np.sqrt(N))%np.sqrt(N)))])
+        part.v=np.random.random(2)
+        part.m=1
+        particles.append(part)
+#    skalowanie predkosci, by srodek masy spoczywal
+    for part in particles:
+        sumV=sumV+part.v
+    sumV=sumV/N
+    for part in particles:
+        part.v=(part.v-sumV)
+    for part in particles:
+        sumV2=sumV2+np.dot(part.v,part.v)/2.0
+    sumV2=sumV2/N #srednia energia kinetyczna 
+    fs=np.sqrt(temp_0/sumV2)
+    for part in particles:
+        part.v=part.v*fs
+    return  particles
+
+def check_distance(part1, part2):
+    r12=part2.r-part1.r
+    if r12[0] > box/2: # b2 – połowa pudełka b2=b/2
+        r12[0] =r12[0]-box # przesuwamy współrzędną x wektora r_vect
+    elif r12[0] <-box:
+        r12[0] =r12[0]+box # b – bok pudełka
+    if r12[1] > box/2: # to samo dla y
+        r12[1] =r12[1]-box
+    elif r12[1] <-box/2:
+        r12[1] =r12[1]+box    
+    return r12
+    
+def force(part1, part2):
+    sig14=sigma**14
+    sig8=sigma**8
+    r14=la.norm(check_distance(part1, part2))**14
+    r8=la.norm(check_distance(part1, part2))**8
+    if (la.norm(part2.r-part1.r) > force_limit):
+        return np.asarray([0,0])
+    if (la.norm(part2.r-part1.r) < part1.R):
+        return -(48*epsi/sigma**2)*((sig14/part1.R**14)-0.5*(sig8/part2.R**8))*(part2.r-part1.r)
+    else:
+        return -(48*epsi/sigma**2)*(sig14/r14-0.5*(sig8/r8))*(part2.r-part1.r)
+   
+def force_all(particles):
+    forces=np.zeros([len(particles),2])
+    count=0
+    for i in particles:
+        for j in particles:
+            if (i!=j):
+               forces[count]= forces[count]+force(i,j)
+        count=count+1
+    return forces
+    
+def scaling(particles):
+    forces=force_all(particles)
+    for i in range(len(particles)):
+        A=(1/particles[i].m)*np.dot(particles[i].v,forces[i])
+        B=(1/particles[i].m)*np.dot(particles[i].v, particles[i].v)
+    lamb=A/B
+    return lamb
+    
+def Alg_Frog(particles):
+    sila_temp=force_all(particles)
+    count=0
+    for part in particles:
+        V_temp=part.v
+        R_temp=part.r
+        part.v=V_temp+(sila_temp[count])*dt      
+        part.r=R_temp+part.v*dt
+        #v(t)=1/2t(r(t+1)-r(t-1))
+        count = count+1
+        if (part.r[0] > box):
+            part.r[0] = (part.r[0]%box)
+        if (part.r[1] > box):
+            part.r[1] = (part.r[1]%box)
+        if (part.r[0] < 0):
+            part.r[0] =(part.r[0]%box)
+        if (part.r[1] < 0):
+            part.r[1] = (part.r[1]%box)
+    return particles
+    
+def Alg_Frog_termo(particles, temp_ext):
+    sila_temp=force_all(particles)
+    count=0
+    Temp=Temperature(particles)
+    ni=np.sqrt(temp_ext/Temp)
+    for part in particles:
+        V_temp=part.v
+        R_temp=part.r
+        part.v=(2*ni-1)*V_temp + ni*(sila_temp[count]/part.m)*dt
+        part.r=R_temp+part.v*dt
+        count = count+1
+        if (part.r[0] > box):
+            part.r[0] = (part.r[0]%box)
+        if (part.r[1] > box):
+            part.r[1] = (part.r[1]%box)
+        if (part.r[0] < 0):
+            part.r[0] =(part.r[0]%box)
+        if (part.r[1] < 0):
+            part.r[1] = (part.r[1]%box)
+    return particles
+
+def plotting_movie(Freq, No):
+#co ile krokow zapisa klatki filmowej
+    if (No%Freq==0): # co 100-na klatka
+        plt.clf() # wyczyść obrazek
+        F = plt.gcf() # zdefiniuj nowy
+        for part in particles: # pętla po cząstkach
+            a = plt.gca() # ‘get current axes’ (to add smth to them)
+            cir = plt.Circle((part.r[0], part.r[1]), radius=part.R) # kółko tam gdzie jest cząstka
+            a.add_patch(cir) # dodaj to kółko do rysunku
+        plt.plot() # narysuj
+        plt.xlim(0,box) # obszar do narysowania
+        plt.ylim(0,box)
+        F.set_size_inches((6,6)) # rozmiar rysunku
+        nStr=str(No) #nagraj na dysk – numer pliku z 5 cyframi, na początku zera, np 00324.png
+        nStr=nStr.rjust(5,'0')
+        Title='Symulacja '+str(No)+' '+str(nStr)
+        plt.title(Title)
+        NameFile='symulacja_gaz'+'img'+str(nStr)+'.png'
+        plt.savefig(NameFile)
+        print("Progress: %0.2f" %(100*No/steps), "%")
+        
+           
+def pos_vel_saving(Freq,No):
+    R=np.zeros([N,2])
+    V=np.zeros([N,2])
+    if (No%Freq==0):
+        for part in particles:
+            R[particles.index(part),:]=part.r
+            V[particles.index(part),:]=part.v
+        return R,V
+
+def saving_Energy(Ek,Ep,Freq,No):
+    if (No%Freq==0):
+        Ek.append(kinetic_energy(particles))
+        Ep.append(potencial_energy(particles))
+        
+def plot_Energy(Ek,Ep):
+    X=range(len(Ek))
+    Ek=np.asarray(Ek)
+    Ep=np.asarray(Ep)
+    plt.figure(2)
+    plt.plot(X,Ek,label='Kinetic')
+    plt.plot(X,Ep,label='Potential')
+    plt.plot(X,Ep+Ek,label='Overall')
+    plt.ylim(0, 3*np.mean(Ek+Ep))
+    plt.legend()
+    
+def velocity_dist(particles, No, steps):
+    if(No > int (0.6*steps)):
+        for part in particles:
+            Velocities.append(np.dot(part.v,part.v))
+    if(No >= steps-1):
+        plt.figure(3)
+        plt.hist(Velocities,bins=20)
+        
+    
+'----------------------INIT PROGRAMU, ZMIENNE----------------------66--------'
+""" 
+Sterowanie= 1 - without thermostat
+Sterowanie= 2 - with thermostat
+"""
+
+N=9 #particle number
+steps=5001 #simulation length (to obtain intersting results use +25000 steps)
+
+
+
+Sterowanie=2
+sigma=1.0 #stale w potencjale
+epsi=1.0 #stale w potencjale
+force_limit=3.5*sigma #odciecie oddzialywan sil
+k_b=1 #stala Boltzmanna
+Radius=0.5 #promien czastki
+dt=0.0002
+temp_0=(epsi/k_b)*2 #temperatura ukladu
+
+box=10 #odleglosci poczatkowe pudelka
+dx,dy=10,10
+freq=100
+freq_r=10
+
+particles=Init_r(N, dx, dy)
+
+Ek=[] #energia kinetyczna
+Ep=[] #energia potencjalna
+T=[] #temperatura
+P=[] #cisnienie
+Velocities=[] #predkosci danych czastek
+'--------------------ZAPIS I TWORZENIE FILMU----------------------------------'
+
+
+for No in range(steps):
+    if (Sterowanie==1):
+        particles=Alg_Frog(particles)
+        
+    if (Sterowanie==2):
+        particles=Alg_Frog_termo(particles, temp_0)
+    if (No%freq==0):
+        print("Progress: %0.2f" %(100*No/steps), "%")  
+#    plotting_movie(freq, No)
+    saving_Energy(Ek,Ep,freq_r, No)
+    T.append(Temperature(particles))
+#    P.append(Pressure(particles))
+    velocity_dist(particles, No, steps)
+    
+plot_Energy(Ek,Ep)
+
+    
+
+    
