@@ -1,0 +1,195 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Dec  6 11:28:19 2017
+
+@author: Maciek
+"""
+
+import numpy as np
+import matplotlib.pyplot as plt
+from collections import deque
+from scipy.optimize import curve_fit
+
+def sasiedzi(i):
+    x=i[1]
+    y=i[0]
+    neigh=[]
+    # trafia na scianke po prawej
+    neigh.append((y,x+1))
+    # trafia na scianke po lewej
+    neigh.append((y,x-1))
+    
+    if y-1==0: # trafia na gorna scianke i sie zawija
+        neigh.append((L-2,x))
+    else:
+        neigh.append((y+1,x))
+        
+    if y+1==L-1: # trafia na dolna scianke i si zawija
+        neigh.append((1,x))
+    else:
+        neigh.append((y-1,x))
+        
+    return neigh
+def Init(L):
+    lattice = np.ones((L,L),dtype=np.int8)*(-1)
+    # brzegi boczne siatki zaznaczamy dodatkowa flaga (-2)
+    lattice[0,:]= -2
+    lattice[L-1,:]=-2
+    lattice[:,0]= -2
+    lattice[:,L-1]=-2
+    #srodek=1
+    lattice[int(L/2), int(L/2)]=1
+    #generowanie od razu calej tablicy licz przypadkowych
+    tossing = np.random.random((L,L))
+    #podwojna kolejka, dodajemy srodek na poczatek
+    return lattice, tossing
+
+def movie(lattice,krok):
+    plt.clf() # wyczyść obrazek
+    F = plt.gcf() # zdefiniuj nowy
+    F.set_size_inches((6,6)) # rozmiar rysunku
+    Title="Numer kroku: "+ str(krok)
+    plt.title(Title)
+    plt.imshow(lattice, interpolation='nearest')
+    NameFile='symulacja_perkolacje/'+str(krok)+'.png'
+    plt.savefig(NameFile)
+
+def fitting(x,y):
+    def function(x,a,p_c):
+        return  0.5*np.tanh((x-p_c)/a)+0.5
+    popt, pcov = curve_fit(function,x,y)
+    plt.plot(x, function(x,*popt),'r-')
+    return popt
+def fitting_lin(x,y):
+    def function(x,a,b):
+        return  a*x+b
+    popt, pcov = curve_fit(function,x,y)
+    plt.plot(x, function(x,*popt),'r-')
+    return popt
+    
+def Program(L,P):
+    prob=[] #prawd. perkolacji
+    rozmiar_sr=[]  #sredni rozmiar klastra
+    
+    for p in P:
+        hits=0
+        sums=[]
+        for k in range(Nr):
+            print("Progress: %0.2f" %(100*k/Nr), "% ", "%.2f" % round(p,2), "%.1f" %L)
+            
+            lattice,tossing=Init(L)
+            #podwojna kolejka, dodajemy srodek na poczatek
+            cluster = deque()
+            cluster.append((int(L/2), int(L/2)))
+            hit = False
+    #        p= 0.5927 
+            neigh=[]
+            krok=0
+            
+            while not( len(cluster) == 0 ):
+                krok=krok+1
+                i = cluster.pop() #usuwamy ostatni element
+                neigh = sasiedzi(i)
+            #            movie(lattice, krok)
+                for j in neigh:
+                    if (lattice[j] == -2): # boundary hit
+                        hit = True
+                    if (lattice[j] == -1): # only virgin sites
+                        if tossing[j] < p:
+                            lattice[j] = 1 # occupied
+                            cluster.append(j) # and included
+                        else:
+                            lattice[j] = 0 # empty site
+                            
+            if (hit==True):
+                hits=hits+1
+            if (hit==False):
+                sums.append(np.sum(lattice==1))
+        if(len(sums) > 0):
+            sums=np.mean(sums) 
+        else:
+            sums=0
+            
+        prob.append(hits/Nr)
+        rozmiar_sr.append(sums)
+        
+    return rozmiar_sr, prob
+    
+"INIT SIECI"
+
+Lx=[50, 150,  250]
+Prawd=np.linspace(0.45, 0.7, 3)  
+Nr=50
+Rozmiar_klastra=[]
+Prawd_perkolacji=[]
+P_c=[]
+counter=0
+
+for L in Lx:
+    Rozm, Perk=Program(L,Prawd)
+    Rozmiar_klastra.append(Rozm)
+    Prawd_perkolacji.append(Perk)
+    P_c.append(fitting(Prawd,Prawd_perkolacji[counter]))
+    counter=counter+1
+    
+
+#"Zad 3"
+X=1/np.asarray(Lx)
+Params =np.asarray(P_c)
+Lx=np.asarray(Lx)
+v=4/3
+
+plt.subplot(211)
+fitting_lin(X,Params[:,1])
+plt.plot(X,Params[:,1], 'ro')
+plt.title("P_c(L)")
+plt.xlabel("1/L")
+
+
+plt.subplot(212)
+plt.yscale('log')
+plt.xscale('log')
+plt.plot(Lx,Params[:,0], 'ro',  Lx, Lx**(-1/v), 'b--')
+plt.title("a(L)")
+plt.xlabel("log(L)")
+
+plt.subplot(321)    
+plt.plot(Prawd,Prawd_perkolacji[0], 'ro')
+fitting(Prawd,Prawd_perkolacji[0])
+plt.ylim([0,1.1])
+plt.grid()
+
+plt.subplot(322)    
+plt.plot(Prawd,Rozmiar_klastra[0], 'ro')
+plt.grid()
+
+plt.subplot(323)    
+plt.plot(Prawd,Prawd_perkolacji[1], 'ro')
+fitting(Prawd,Prawd_perkolacji[1])
+plt.ylim([0,1.1])
+plt.grid()
+
+plt.subplot(324)    
+plt.plot(Prawd,Rozmiar_klastra[1], 'ro')
+plt.grid()
+
+plt.subplot(325)    
+plt.plot(Prawd,Prawd_perkolacji[2], 'ro')
+fitting(Prawd,Prawd_perkolacji[2])
+plt.ylim([0,1.1])
+plt.grid()
+
+plt.subplot(326)    
+plt.plot(Prawd,Rozmiar_klastra[2], 'ro')
+plt.grid()
+
+
+#print("Wielkosc klastra: ", np.sum(lattice==1))                
+#plt.imshow(lattice, interpolation='nearest')
+
+
+
+
+
+
+
