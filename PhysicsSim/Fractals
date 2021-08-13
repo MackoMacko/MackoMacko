@@ -1,0 +1,160 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Nov 15 11:39:25 2017
+
+@author: Maciek
+"""
+
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
+import datetime
+
+def trojkat(r):
+    r_new=r
+    x=r[0]
+    y=r[1]
+    #transformacje i prawdopodobienstwa:
+    p = np.asarray([1./3, 2./3])
+    m= np.asarray([[0.5, 0, 0, 0.5, 0.0, 0], [0.5, 0, 0, 0.5, 0.5, 0], [0.5, 0, 0, 0.5, 0.25, np.sqrt(3.)/4]])
+    c=np.random.random()
+
+    if (c < p[0]):
+        r_new[0] = m[0,0]*x + m[0,1]*y + m[0,4]
+        r_new[1] = m[0,2]*x + m[0,3]*y + m[0,5]
+
+    if (c > p[0] and c <= p[1]):
+        r_new[0] = m[1,0]*x + m[1,1]*y + m[1,4]
+        r_new[1] = m[1,2]*x + m[1,3]*y + m[1,5]
+
+    if (c > p[1]):
+        r_new[0] = m[2,0]*x + m[2,1]*y + m[2,4]
+        r_new[1] = m[2,2]*x + m[2,3]*y + m[2,5]
+
+    return r_new
+    
+def paprotka(r):
+    r_new=r
+    x=r[0]
+    y=r[1]
+    #transformacje i prawdopodobienstwa:
+    p = np.asarray([0.73, 0.13, 0.12, 0.03])
+    p_sum=np.cumsum(p)
+    m= np.asarray([[ 0.85, 0.04,-0.04, 0.85, 0.0, 1.6], [ 0.2,-0.26, 0.23, 0.22, 0.0, 1.6],
+                   [-0.15, 0.28, 0.26, 0.24, 0.0, 0.44], [ 0.0, 0.0, 0.0, 0.16, 0.0, 0.0]])
+    c=np.random.random()
+
+    if (c < p[0]):
+        r_new[0] = m[0,0]*x + m[0,1]*y + m[0,4]
+        r_new[1] = m[0,2]*x + m[0,3]*y + m[0,5]
+
+    if (c > p_sum[0] and c <= (p_sum[1])):
+        r_new[0] = m[1,0]*x + m[1,1]*y + m[1,4]
+        r_new[1] = m[1,2]*x + m[1,3]*y + m[1,5]
+
+    if (c > p_sum[1] and c <= p_sum[2]):
+        r_new[0] = m[2,0]*x + m[2,1]*y + m[2,4]
+        r_new[1] = m[2,2]*x + m[2,3]*y + m[2,5]
+
+    if (c > p_sum[2]):
+        r_new[0] = m[3,0]*x + m[3,1]*y + m[3,4]
+        r_new[1] = m[3,2]*x + m[3,3]*y + m[3,5]
+
+    return r_new
+    
+def smok(r):
+    r_new=r
+    x=r[0]
+    y=r[1]
+    m = np.asarray([[0.824074, 0.281482, -0.212346, 0.864198, -1.882290,-0.110607], 
+                   [0.088272, 0.520988, -0.463889, -0.377778, 0.785360,8.095795]])
+    p1 = 0.787473 
+    c = np.random.random()
+    if (c < p1):    #p3
+        r_new[0] = m[0,0]*x + m[0,1]*y + m[0,4]
+        r_new[1] = m[0,2]*x + m[0,3]*y + m[0,5]
+    if (c > p1):    #p4
+        r_new[0] = m[1,0]*x + m[1,1]*y + m[1,4]
+        r_new[1] = m[1,2]*x + m[1,3]*y + m[1,5]
+    
+    return r_new
+    
+def siatka(xy,r):
+    x_lim=np.asarray( [np.min(xy[:,0]), np.max(xy[:,0])] ) #min xy fraktala
+    y_lim=np.asarray( [np.min(xy[:,1]), np.max(xy[:,1])] ) #max xy fraktala
+    r=int(r)
+    box = np.zeros((2**r,2**r),dtype=int) # pudelko o wymiarach 2**r x 2**r
+    eps = 0.001
+    tabx = np.array((xy[:,0] - x_lim[0])/(x_lim[1] - x_lim[0] + eps) * 2**r, dtype = int )
+    taby = np.array((xy[:,1] - y_lim[0])/(y_lim[1] - y_lim[0] + eps) * 2**r, dtype = int )
+    box[tabx, taby] = 1
+    return np.max(np.cumsum(box))
+    
+
+    
+def fitting(xy,r):
+    def function(x,a,b):
+        return  a*x + b
+    X=np.linspace(1,r,r)*np.log(2) #os X=rlog(2)
+    N_r=np.asarray([ np.log(siatka(xy,r)) for r in range(r)]) #os Y opisujaca liczbe zapelnionych kratek przez fraktal (logarytm)
+#    
+#    for r in range(r):
+#        N_r.append(np.log(siatka(xy,r)))
+#    
+    popt, pcov = curve_fit(function,X,N_r)
+    perr = np.sqrt(np.diag(pcov))
+    print("Blad dopasowania: a=%0.2f" %perr[0], " b= %0.2f" %perr[1])
+    plt.rcParams['axes.facecolor'] = 'white'    
+    plt.plot(X,N_r,'o', X, function(X,*popt),'r-')
+    plt.title("Wymiarowosc fraktala:"+str(round(popt[0],3)))
+    return X, N_r
+    
+def plot_figure(r):   
+    plt.figure(1)
+    plt.rcParams['axes.facecolor'] = 'black'
+    plt.scatter(r[:,0],r[:,1], s=1, marker=".", lw=0, c=(0.,1.,0.))
+    plt.show()    
+    
+    
+Sterowanie= int(input("Choose fractal type (1-3): "))
+N=100000
+r=7
+xy=np.zeros((N,2))
+
+
+if (Sterowanie==1):    
+    a = datetime.datetime.now()
+    for i in range(N-1):
+        xy[i+1] = trojkat(xy[i])
+
+if (Sterowanie==2):    
+    a = datetime.datetime.now()
+    for i in range(N-1):
+        xy[i+1] = paprotka(xy[i])
+
+if(Sterowanie==3):
+    a = datetime.datetime.now()
+    for i in range(N-1):
+        xy[i+1] = smok(xy[i])
+
+plot_figure(xy)
+fitting(xy,r)        
+b = datetime.datetime.now()
+print("Calculation time:")
+print(b-a)
+ 
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
