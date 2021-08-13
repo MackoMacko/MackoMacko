@@ -1,0 +1,113 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Nov 29 11:20:56 2017
+
+@author: Maciek
+"""
+
+import numpy as np
+from numpy import linalg as la
+import matplotlib.pyplot as plt
+
+def Losowanie(R_agr):
+    R=R_agr+2*dr
+    theta=np.random.random()*2*np.pi
+    x=int(R*np.cos(theta)+0.5)
+    y= int(R*np.sin(theta)+0.5)
+    return x,y
+    
+def Bladzenie(x,y, R_agr):
+    A=np.random.random() 
+    if(A <Sum_prob[0]):
+        x= x - dr
+    if(A >Sum_prob[0] and A <Sum_prob[1]):
+        x= x + dr 
+    if(A >Sum_prob[1] and A <Sum_prob[2]):
+        y= y - dr
+    if(A >Sum_prob[2] and A <Sum_prob[3]):
+        y= y + dr
+    return x,y
+    
+def Agregacja(x,y,dr):
+    Agregat.add((x,y))
+    FreeSlot.discard((x,y))
+    AddSlot(x,y,dr)
+    return 1
+
+def AddSlot(x,y,dr):
+    FreeSlot.add((x,y+dr))
+    FreeSlot.add((x+dr,y))
+    FreeSlot.add((x-dr,y))
+    FreeSlot.add((x,y-dr))
+    if (FreeSlot in Agregat):
+        Agregat.discard(FreeSlot)
+            
+def Radius(Agregat,R):
+    x,y = max(Agregat)
+    x1,y1 = min(Agregat)
+    if np.sqrt(x**2+y**2)>R:
+        R = int(np.sqrt(x**2+y**2)+0.5)
+    if np.sqrt(x1**2+y1**2)>R:
+        R = int(np.sqrt(x1**2+y1**2)+0.5)
+    return R
+    
+"ZMIENNE INICJUJACE"
+No=5000 #aggregated particles
+Center=(0,0) #aggregation center
+dr=1 #odstepy
+R=5 #promien poczatkowy
+off_set=20 
+Max=2 #counter of how many time the given spot can be taken to finnaly aggregate
+
+
+prob=[0.25, 0.25, 0.25, 0.25]
+Sum_prob=np.cumsum(prob)
+Agregat=set([])
+Agregat.add(Center)
+
+FreeSlot=set([])
+FreeSlot.add((0,1))
+FreeSlot.add((0,-1))
+FreeSlot.add((1,0))
+FreeSlot.add((-1,0))
+counter={}
+
+
+for i in range(No):
+    ProbAgr=np.random.random()
+    R= Radius(Agregat,R)
+    x,y=Losowanie(R)
+    check=0
+    
+    while (check==0):
+        x,y=Bladzenie(x,y,R)
+        if (x,y) in FreeSlot:
+            if (x,y) in counter:
+                counter[(x,y)]+=1
+                if counter[(x,y)]==Max:
+                    check=Agregacja(x,y,dr)
+                    del counter[(x,y)]
+                check=1
+            else:
+                counter[(x,y)]=1
+                check=1
+
+        else:
+            if (int(np.sqrt(x**2+y**2)) > R+off_set):
+                x,y= (0,0)
+                check=1
+            else:
+                x,y=Bladzenie(x,y,R)
+    plt.scatter(x,y,s=0.8, c='r')
+    
+    print("Progress: %0.2f" %(100*i/No), "% ", i, "/", No)
+plt.show()
+#plt.xlim([480,520])
+#plt.ylim([480,520])
+
+    
+    
+    
+    
+    
+    
