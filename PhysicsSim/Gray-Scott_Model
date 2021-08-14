@@ -1,0 +1,132 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Jan 10 11:32:06 2018
+
+@author: Maciek
+"""
+
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
+
+def progress(i,time):
+    if(i%(int(time/(100))) == 0):
+        print("Progress: %0.2f" %(100*i/time), "% ", i, "/", time)
+        
+def laplasjan(u,dx):
+    if (sterowanie == 1):
+        return (np.roll(u,1,axis=0)-2*u + np.roll(u,-1,axis=0))/dx**2   
+    if (sterowanie == 2):
+        return (np.roll(u,1,axis=0)+ np.roll(u,-1,axis=0)+ np.roll(u,-1,axis=1)+ np.roll(u,1,axis=1)-4*u )/dx**2
+            
+def rysowanie(u,t, freq):
+    if (t % freq == 0):
+        if (sterowanie == 1):
+            X = np.linspace(0, dx*N, N)
+            plt.clf()
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            ax.set_title('Model Graya-Scotta')
+            cax = ax.plot(X,u)
+            filename = 'symulacja_G-S/' + str(t) + '.png'
+         #   plt.savefig(filename, dpi=400)    
+            plt.close(fig)
+    
+        if (sterowanie == 2):
+            plt.clf()
+            fig=plt.figure()
+            ax=fig.add_subplot(111)
+            ax.set_title('Model Graya-Scotta')
+            cax = ax.imshow(u, interpolation='nearest')
+            cax.set_clim(vmin=0, vmax=1)
+            cbar = fig.colorbar(cax, ticks=[0,0.3, 0.5, 1], orientation='vertical')
+            filename =  'symulacja_G-S/' +str(count) +str(F[count]) + '_' + str(k) + '_' + str(t) + '.png'
+            plt.show()
+            #plt.savefig(filename, dpi=400)    
+            plt.close(fig)
+
+def init(N):
+    """INIT SIATKI DO ZADANIA 1. Z SZUMEM NA SRODKU, 1D """
+    if (sterowanie == 1):
+        u = np.ones(N)
+        v = np.zeros(N)
+        for i in range(int(N/4), int(0.75*N)):
+            u[i] = np.random.random()*0.2+0.4
+            v[i] = np.random.random()*0.2+0.2
+    """INIT SIATKI DO ZADANIA 2. Z SZUMEM NA SRODKU, 2D """
+    if (sterowanie == 2):
+        u = np.ones((N,N))
+        v = np.zeros((N,N))
+
+        for i in range(int(N/4), int(0.75*N)):
+            for j in range(int(N/4), int(0.75*N)):
+                u[i,j] = np.random.random()*0.2 + 0.4
+                v[i,j] = np.random.random()*0.2 + 0.4
+    return u,v
+
+def du_dt(u):
+    return D_u*laplasjan(u, dx) - u*v**2 + F[count]*(np.ones(N) - u)
+    
+def dv_dt(v):
+    return D_v*laplasjan(v, dx) + u*v**2 - (F[count] + k)*v
+
+def krok_czasowy(du_dt, dv_dt):
+    return u + du_dt*dt, v + dv_dt*dt
+"""ZMIENNE INIT"""
+sterowanie = int(input("wybierz opcje (1- 1D, 2-2D ): "))
+
+D_u = 2*10**-5
+D_v = 1*10**-5
+F = np.linspace(0.035, 0.08, 30)
+#F = [0.025, 0.03,0.01,0.04,0.06,0.037] 
+#k = [0.055, 0.062, 0.047,0.07,0.0615, 0.06] 
+k = 0.062
+count = 0 #ktora para liczb F, k
+N = 100 #wymiar macierzy
+dx= 0.02 #krok x
+dy = 0.02 #krok y
+T = 5000 #liczba krokow w petli
+dt = 1 #krok czasowy
+Freq = 2500 #czestotliwosc rysowania
+
+u,v = init(N)
+
+for i in range(len(F)):
+    u,v = init(N)
+    for t in np.arange(1,T+1,dt):
+       u,v = krok_czasowy(du_dt(u), dv_dt(v))
+       progress(t, T)
+       rysowanie(u,t, Freq)
+    count += 1
+    if (sterowanie == 1):
+        break
+       
+    
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+    
