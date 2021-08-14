@@ -1,0 +1,145 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Dec 20 11:07:41 2017
+
+@author: Maciek
+"""
+
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
+import time 
+
+def Init_overload():
+    siatka[:,:] = z_max+3
+    
+def Szukaj_krytycznych(siatka):
+    indexy = np.argwhere(siatka >= z_max)
+    return indexy
+    
+def Lawina(siatka):
+    indexy = Szukaj_krytycznych(siatka)
+    rozmiar = set()
+    count = 0
+    while not (indexy.size  == 0): #petla trwa dopoki kolejka ma chociaz jeden element
+        if (sterowanie == 2):
+            count += 1
+            if (count % 4 == 0):
+                rysowanie(siatka, count)
+                
+        for ind in indexy:
+            siatka = Zerowanie(siatka, ind[0], ind[1])
+            rozmiar.add(tuple(ind))
+        indexy = Szukaj_krytycznych(siatka)
+    rozmiar=len(rozmiar)
+    return siatka, rozmiar
+
+def Zerowanie(siatka, x, y):
+    siatka[x,y] = siatka[x,y]-z_max
+    
+    if (x + 1 != N):
+        siatka[x+1,y] += 1
+    if (x - 1 != -1):  
+        siatka[x-1,y] += 1
+    if (y + 1 != N):
+        siatka[x,y+1] += 1
+    if (y - 1 != -1):
+        siatka[x,y-1] += 1    
+    return siatka
+
+def Krok(siatka):
+    if (sterowanie == 0):
+        x,y = np.random.randint(N), np.random.randint(N) #losuje liczbe z zakresu 0-(N-1)
+        siatka[x, y] = siatka[x,y] + 1
+    if (sterowanie == 1):
+        x, y = int((N)/2), int((N)/2)
+        siatka[x, y] = siatka[x,y] + 1
+    siatka, Nr = Lawina(siatka)
+    return siatka, Nr 
+
+def rysowanie(siatka, No):
+    plt.clf()
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.set_title('Height of the Sandpile')
+    cax = ax.imshow(siatka, interpolation='nearest')
+    cax.set_clim(vmin=0, vmax=7)
+    ticks = np.linspace(0,7,8)
+    cbar = fig.colorbar(cax, ticks=[ticks], orientation='vertical')
+    nStr = str(No) #nagraj na dysk – numer pliku z 5 cyframi, na początku zera, np 00324.png
+    nStr = nStr.rjust(5,'0')
+    Title ='Symulacja piasku '+str(nStr)
+    plt.title(Title)
+    NameFile ='symulacja_piasek/'+'img'+str(nStr)+'.png'
+#    plt.savefig(NameFile)
+    plt.close(fig)
+    
+def fitting(X,Y):
+    def function(x,a,b):
+        return  a*x + b
+    popt, pcov = curve_fit(function, X, Y)
+#    plt.plot(X, Y, 'o', X, function(X,*popt),'r-')
+    perr = np.sqrt(np.diag(pcov))
+    print("Blad dopasowania: a=%0.2f" %perr[0], " b= %0.2f" %perr[1])
+    return X, function(X,*popt)
+
+#co ile krokow zapisa klatki filmowej
+    if (No%Freq==0): # co 100-na klatka
+        plt.clf() # wyczyść obrazek
+        rysowanie(siatka)
+        nStr = str(No) #nagraj na dysk – numer pliku z 5 cyframi, na początku zera, np 00324.png
+        nStr = nStr.rjust(5,'0')
+        Title ='Symulacja piasku '+str(nStr)
+        plt.title(Title)
+        NameFile ='symulacja_piasek/'+'img'+str(nStr)+'.png'
+        plt.savefig(NameFile)
+        
+"""Zmienne init"""
+N = 81
+z_max = 4
+siatka = np.zeros([N,N])
+Time = N*N*z_max
+suma = []
+Rozmiar_lawiny = []
+bins = 10
+Freq = 24
+sterowanie=int(input("wybierz opcje (0-random, 1-srodek), 2-war. krytyczne: "))
+time_start=time.time()
+count=0
+
+if (sterowanie == 0 or sterowanie == 1):  
+    for i in range(Time):
+        siatka, rozmiar = Krok(siatka)
+        if ( i % Freq == 0):
+            rysowanie(siatka, i)
+        suma.append(np.sum(siatka))
+        
+        if (i > 0.7*Time):
+            if (rozmiar):
+                Rozmiar_lawiny.append(rozmiar)  
+                
+        if(i%(int(Time/100)) == 0):
+            print("Progress: %0.2f" %(100*i/Time), "% ", i, "/", Time)
+
+    Rozmiar_lawiny = np.histogram(Rozmiar_lawiny, bins)
+    plt.figure(1)        
+    plt.plot(range(Time),suma)
+    plt.figure(2)
+    plt.plot(Rozmiar_lawiny[0],Rozmiar_lawiny[1][:-1], 'r.')
+    plt.grid()
+    plt.yscale('log')
+    plt.xscale('log')
+
+if (sterowanie == 2):
+    Init_overload()
+    siatka, rozmiar = Krok(siatka)
+
+time_stop = time.time()
+
+print("Calculation time: ", time_stop-time_start)
+
+
+
+
+
+
