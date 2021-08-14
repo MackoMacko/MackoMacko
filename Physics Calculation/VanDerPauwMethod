@@ -1,0 +1,47 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+#initial parameters of the measurement
+I = 10 #current in mA
+d = 2.0*10**-7 #thickenss of the sample in m
+B = 0.563 #magnetic field in T
+q = 1.602176634*10**-19 #elementary charge
+epsilon = 0.00005 #error limit
+
+#example of the measured values
+Rver = (170.456 + 170.691 +170.567 + 172.186)/(4*I)
+print('Rver:', Rver)
+Rhor = (62.681 + 61.955 + 62.856 + 63.044)/(4*I)
+print('Rhor:', Rhor)
+Vac = -106.548 + 107.253
+Vca = 106.861  - 107.546
+Vbd = -107.438 + 104.161
+Vdb = 105.274  - 106.647
+
+VH = (Vac + Vca + Vbd + Vdb)/8
+print('VH ',VH)
+ns = ((10**-8)*(I*B))/(q*VH)
+print('ns ', ns)
+n = ns/d #bulk concentration
+print('n ', n)
+
+
+#calculating conductivity z and from there we calculate Rs and Rho
+
+z0 = 2*np.log(2)/(np.pi*(Rver + Rhor
+z_1 = z0
+delta = 1
+while delta >= epsilon:
+  y = np.exp(-np.pi*z_1*Rver) + np.exp(-np.pi*z_1*Rhor)
+  z_2 = z_1 - ((1-y)/np.pi)/(Rver*np.exp(-np.pi*z_1)+ Rhor*np.exp(-np.pi*z_1*Rhor))
+  delta = np.abs((z_2 - z_1)/z_2)
+  z_1 = z_2
+  print(delta)
+
+Rs = 1/z_2
+Rho = Rs*d
+print("RS: [Ohm/sq]", Rs)
+print("Rho: [Ohm/cm]", 100*Rho
+
+
