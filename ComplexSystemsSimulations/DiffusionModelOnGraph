@@ -1,0 +1,77 @@
+
+from pylab import *
+import networkx as nx
+import copy
+
+
+def init_simul():
+    g = nx.karate_club_graph()
+        
+    """adding needed atributes to the graph which are needed to run the simulation"""
+    #fraction attribute c:
+    for i in g.nodes():       
+        g._node[i]['c'] = 0.5
+        
+    g._node[list(g._node.keys())[0]]['c'] = 1 #Mr Hi fraction
+    g._node[list(g._node.keys())[-1]]['c'] = 0 # John fraction
+    
+    for k in g._adj:
+        for k2 in g._adj[k]:
+            g._adj[k][k2]['w'] = 0.5
+        
+    return g
+    
+
+
+def update_graph(g, b, D, dt):
+    f = lambda x: (abs(x) - 0.25)**3
+    #g_tmp = copy.deepcopy(g) #temp copy of a graph
+    g_tmp = copy.deepcopy(g)
+    for k in g._adj:
+        c = g_tmp._node[k]['c']
+        
+        for k2 in g._adj[k]:
+            w_ij = g_tmp._adj[k][k2]['w']
+            
+            g._adj[k][k2]['w'] += dt*(
+                -b*w_ij*(1-w_ij)*f(g_tmp._node[k]['c'] - g_tmp._node[k2]['c']))
+                       
+            c += (g_tmp._node[k2]['c'] - g_tmp._node[k]['c'])*w_ij*dt
+        g._node[k]['c'] = c
+        g._node[list(g._node.keys())[0]]['c'] = 1 #Mr Hi fraction
+        g._node[list(g._node.keys())[-1]]['c'] = 0 # John fraction
+        
+    return g
+
+
+
+
+def simul_run(g,b,D,dt,t_steps):
+    #since we want to see the division of the graph in the most pleasing way, we need to choose the positions of each node individually:
+    pos = {0: [-0.39, -0.2], 1: [-0.25, -0.1],  2: [-0.05, 0.14], 3: [-0.4, 0.04], 4: [-0.73, -0.5], 5: [-0.52, -0.71],
+ 6: [-0.66, -0.64], 7: [-0.38, 0.2], 8: [0.09, -0.04], 9: [0.24, 0.29], 10: [-0.56, -0.54], 11: [-0.88, -0.23],
+ 12: [-0.71, 0.06], 13: [-0.05, -0.05], 14: [0.74, -0.02], 15: [0.78, 0.09], 16: [-0.68, -1.0], 17: [-0.62, -0.12],
+ 18: [0.74, 0.21], 19: [-0.1, -0.3], 20: [0.56, -0.19], 21: [-0.54, -0.3], 22: [0.68, -0.13], 23: [0.46, 0.46],
+ 24: [0.06, 0.71], 25: [0.25, 0.7], 26: [0.81, 0.4], 27: [0.22, 0.48], 28: [0.09, 0.4], 29: [0.64, 0.36],
+ 30: [0.21, -0.15], 31: [0.15, 0.2], 32: [0.45, -0.1], 33: [0.39, 0.14]}
+
+    #main loop of the time flow:
+    for t in range(t_steps - 1):
+        g = update_graph(g,b,D,dt)
+        if t % 10 == 0:
+            print(100*t/t_steps, '%')
+            nx.draw(g, pos,cmap = cm.cool, vmin = 0, vmax = 1, 
+                           with_labels = True,
+                           node_color = [g.nodes[i]['c'] for i in iter(g.nodes)], 
+                           edge_cmap = cm.binary, edge_vmin = 0, edge_vmax = 1,
+                           width = [4*g._adj[i][j]['w'] for i,j in g.edges])
+            
+            plt.title(str(t).zfill(6))
+         
+            plt.savefig('C:\\Users\\admin\\Downloads\\complexsystems4\\'+str(t).zfill(6),dpi=200,bbox = [6,6])
+            plt.show(block = False)
+    return pos
+   
+
+g = init_simul()
+d = simul_run(g,10,5,0.01,8000)
