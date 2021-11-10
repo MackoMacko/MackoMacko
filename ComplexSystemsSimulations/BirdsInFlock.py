@@ -84,7 +84,7 @@ def simulation_main(prey = None, L = 10, N = 800,v_0 = 2, a = 0.025,r_b = 3,dt =
             plt.ylim([-0.05*L,1.05*L])
             plt.quiver(birds[:,0],birds[:,1],
                        np.cos(birds[:,2]),np.sin(birds[:,2]), 
-                       np.arctan2(np.cos(birds[:,2]),np.sin(birds[:,2])))
+                       birds[:,2])
             plt.show()
     return birds
 
